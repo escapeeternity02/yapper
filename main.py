@@ -72,7 +72,9 @@ def health_check():
 session_file_path = os.path.join('sessions', 'session1.session')  # Adjusting for the correct session file
 
 # Telegram Client setup using the session file
-client = TelegramClient(session_file_path, api_id=None, api_hash=None)  # No need for API credentials anymore
+api_id = '27161962'  # Replace with your actual API ID
+api_hash = 'd1fbc0d985163be463ef2083ffb7b86f'  # Replace with your actual API Hash
+client = TelegramClient(session_file_path, api_id, api_hash)  # API credentials needed
 
 # Admin user IDs for admin-specific replies (adjust with actual admin IDs)
 admins = [123456789, 987654321]  # Replace with actual admin user IDs
