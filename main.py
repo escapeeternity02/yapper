@@ -4,6 +4,7 @@ import asyncio
 from flask import Flask
 from telethon import TelegramClient
 import threading
+import os
 
 # Flask setup for web service
 app = Flask(__name__)
@@ -67,10 +68,13 @@ def generate_contextual_reply(text, is_admin=False):
 def health_check():
     return "YapperBot is running!", 200
 
-# Telegram Client setup using session file
-client = TelegramClient('yapper_session', api_id=None, api_hash=None)  # No need for API credentials anymore
+# Set the path for the session file stored in the 'sessions' folder
+session_file_path = os.path.join('sessions', 'yapper_session')  # Adjust the session file name if needed
 
-# Admin user IDs for admin specific replies (adjust with actual admin IDs)
+# Initialize Telegram client using the session file
+client = TelegramClient(session_file_path, api_id=None, api_hash=None)  # No need for API credentials anymore
+
+# Admin user IDs for admin-specific replies (adjust with actual admin IDs)
 admins = [123456789, 987654321]  # Replace with actual admin user IDs
 
 # Group username
