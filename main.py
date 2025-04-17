@@ -1,8 +1,9 @@
-
 import logging
 import random
 import asyncio
 from flask import Flask
+from telethon import TelegramClient
+import threading
 
 # Flask setup for web service
 app = Flask(__name__)
@@ -16,7 +17,7 @@ def log_message(message, sender_id=None, is_reply=False):
         logging.info(f"Sent to {sender_id}: {message}")
     else:
         logging.info(f"Sent message: {message}")
-    
+        
     if is_reply:
         logging.info(f"Reply message: {message}")
 
@@ -66,6 +67,22 @@ def generate_contextual_reply(text, is_admin=False):
 def health_check():
     return "YapperBot is running!", 200
 
+# Telegram Client setup (make sure to provide your own API ID and Hash)
+api_id = 'YOUR_API_ID'
+api_hash = 'YOUR_API_HASH'
+client = TelegramClient('yapper_session', api_id, api_hash)
+
+# Admin user IDs for admin specific replies (adjust with actual admin IDs)
+admins = [123456789, 987654321]  # Replace with actual admin user IDs
+
+# Group username
+group_username = '@yapply'
+
+# Fake typing simulation function
+async def fake_typing(group):
+    # Simulate typing for a little delay (mimicking user behavior)
+    await asyncio.sleep(random.uniform(1, 3))
+
 # Send message function
 async def send_message(group):
     message = "I am just a bot yapping away..."
@@ -80,22 +97,30 @@ async def reply_to_message(group):
             is_admin = msg.sender_id in admins
             reply = generate_contextual_reply(msg.text, is_admin)
             memory_reply = reference_memory()
+
             if memory_reply and random.random() < 0.3:
                 reply = memory_reply
 
             await fake_typing(group)
+
             try:
                 await client.send_message(group, reply, reply_to=msg.id)
                 add_to_memory(reply)
                 log_message(reply, msg.sender_id, is_reply=True)
-            except:
-                pass
+            except Exception as e:
+                logging.error(f"Error sending message: {e}")
             break
 
+# Main bot logic function
+async def main_bot_logic():
+    await client.start()
+    while True:
+        await reply_to_message(group_username)
+        await asyncio.sleep(1)  # Sleep to avoid hitting API too frequently
+
+# Start Flask server in a separate thread to handle HTTP requests
 if __name__ == "__main__":
-    # Start Flask server in a separate thread to handle HTTP requests
-    import threading
     threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000)).start()
     
-    # Your existing bot logic here (telethon, messaging, etc.)
+    # Run the bot logic
     asyncio.run(main_bot_logic())
