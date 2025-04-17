@@ -68,17 +68,14 @@ def generate_contextual_reply(text, is_admin=False):
 def health_check():
     return "YapperBot is running!", 200
 
-# Set the path for the session file stored in the 'sessions' folder
-session_file_path = os.path.join('sessions', 'yapper_session')  # Adjust the session file name if needed
-
-# Set the path for the session file stored in the 'sessions' folder
+# Path for the session file
 session_file_path = os.path.join('sessions', 'session1.session')  # Adjusting for the correct session file
 
-# Initialize Telegram client using the session file
+# Telegram Client setup using the session file
 client = TelegramClient(session_file_path, api_id=None, api_hash=None)  # No need for API credentials anymore
 
 # Admin user IDs for admin-specific replies (adjust with actual admin IDs)
-admins = [123456789, 8050338012]  # Replace with actual admin user IDs
+admins = [123456789, 987654321]  # Replace with actual admin user IDs
 
 # Group username
 group_username = '@yapply'
