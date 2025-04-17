@@ -67,10 +67,8 @@ def generate_contextual_reply(text, is_admin=False):
 def health_check():
     return "YapperBot is running!", 200
 
-# Telegram Client setup (make sure to provide your own API ID and Hash)
-api_id = 'YOUR_API_ID'
-api_hash = 'YOUR_API_HASH'
-client = TelegramClient('yapper_session', api_id, api_hash)
+# Telegram Client setup using session file
+client = TelegramClient('yapper_session', api_id=None, api_hash=None)  # No need for API credentials anymore
 
 # Admin user IDs for admin specific replies (adjust with actual admin IDs)
 admins = [123456789, 987654321]  # Replace with actual admin user IDs
