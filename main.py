@@ -4,8 +4,7 @@ import asyncio
 from flask import Flask
 from telethon import TelegramClient
 import threading
-import os
-import time
+import re
 
 # Flask setup for web service
 app = Flask(__name__)
@@ -37,80 +36,48 @@ def reference_memory():
         return f"Like I said earlier: {ref}"
     return None
 
-# Enhanced Contextual replies with better diversity
-def generate_contextual_reply(text, is_admin=False):
+# Improved keyword matching using regular expressions
+def match_keywords(text):
     text = text.lower()
-    reply = None
 
-    # Enhanced responses with more variety
-    if "tired" in text:
-        reply = random.choice([
-            "Mood. Sleep schedule’s a myth here.",
-            "Same, I think I need a nap.",
-            "I feel you. It's like the sleep cycle doesn't exist."
-        ])
-    elif "who are you" in text or "what are you" in text:
-        reply = random.choice([
-            "Just your friendly yap neighbor.",
-            "I'm just a bot trying to fit in. 😎",
-            "You can call me Yapper, your chatbot friend."
-        ])
-    elif "lol" in text or "lmao" in text:
-        reply = random.choice([
-            "Literally me 😂",
-            "I died at that one 😂",
-            "That made me laugh, no cap 😂"
-        ])
-    elif "bot" in text:
-        reply = random.choice([
-            "You callin' me out? 👀",
-            "Yes, I am a bot, but don't judge me! 😅",
-            "Yes, I may be a bot, but I’ve got personality!"
-        ])
-    elif "why" in text:
-        reply = random.choice([
-            "Why not?",
-            "Because... reasons! 🤷‍♂️",
-            "Just because, that's why. 😜"
-        ])
-    elif "admin" in text:
-        reply = random.choice([
-            "Admins keep this realm in balance fr.",
-            "Shoutout to the admins for keeping things running.",
-            "Admins are the true heroes here. 🔥"
-        ])
+    if re.search(r'\btired\b|\bexhausted\b', text):
+        return "Mood. Sleep schedule’s a myth here."
+    elif re.search(r'\bwho are you\b|\bwhat are you\b', text):
+        return "Just your friendly yap neighbor."
+    elif re.search(r'\blol\b|\blmao\b', text):
+        return "Literally me 😂"
+    elif re.search(r'\bbot\b', text):
+        return "You callin' me out? 👀"
+    elif re.search(r'\bwhy\b', text):
+        return "Why not?"
+    elif re.search(r'\badmin\b', text):
+        return "Admins keep this realm in balance fr."
+    
+    return None  # If no match, return None
 
-    if is_admin:
-        admin_respects = [
-            "Respect, boss 🫡", "Big facts, appreciate that", "Noted, thanks legend",
-            "Admin wisdom right there 🔥"
-        ]
-        reply = reply or random.choice(admin_respects)
+# Contextual replies
+def generate_contextual_reply(text, is_admin=False):
+    reply = match_keywords(text)
 
-    return reply or random.choice([
-        "idk what to say but here I am anyway.",
-        "I'm just here vibing, can't relate tho.",
-        "Your guess is as good as mine! 😅"
-    ])
+    if reply:  # If a keyword match was found
+        return reply
+    else:
+        # If no keyword match, provide a fallback response
+        return "I’m just vibing here, don’t mind me! 😅"
 
 # Health check route to keep the server alive
 @app.route('/health', methods=['GET'])
 def health_check():
     return "YapperBot is running!", 200
 
-# Path for the session file
-session_file_path = os.path.join('sessions', 'session1.session')  # Adjusting for the correct session file
+# Telegram Client setup using session file
+client = TelegramClient('session1.session', api_id=None, api_hash=None)  # Using session file directly
 
-# Telegram Client setup using the session file
-api_id = '27161962'  # Replace with your actual API ID
-api_hash = 'd1fbc0d985163be463ef2083ffb7b86f'  # Replace with your actual API Hash
-client = TelegramClient(session_file_path, api_id, api_hash)  # API credentials needed
-
-# Admin user IDs for admin-specific replies (adjust with actual admin IDs)
+# Admin user IDs for admin specific replies (adjust with actual admin IDs)
 admins = [123456789, 8050338012]  # Replace with actual admin user IDs
 
 # Group username
-group_username = '@yapply'
+group_username = '@yapplytesting'
 
 # Fake typing simulation function
 async def fake_typing(group):
@@ -124,53 +91,33 @@ async def send_message(group):
     await client.send_message(group, message)
     log_message(message)
 
-# Time tracking and message limit variables
-last_sent_time = time.time()  # Tracks the last message sent
-message_count = 0  # Tracks how many messages were sent in the last minute
-
-# Replying function with message limit check
+# Replying function
 async def reply_to_message(group):
-    global last_sent_time, message_count
+    async for msg in client.iter_messages(group, limit=50):
+        if msg.sender_id and msg.text and random.random() < 0.5:
+            is_admin = msg.sender_id in admins
+            reply = generate_contextual_reply(msg.text, is_admin)
+            memory_reply = reference_memory()
 
-    # Check if 1 minute has passed since the last message
-    if time.time() - last_sent_time > 60:
-        message_count = 0  # Reset count after 1 minute
+            if memory_reply and random.random() < 0.3:
+                reply = memory_reply
 
-    # Check if the bot has sent less than 3 messages in the last minute
-    if message_count < 3:
-        async for msg in client.iter_messages(group, limit=50):
-            if msg.sender_id and msg.text and random.random() < 0.5:
-                is_admin = msg.sender_id in admins
-                reply = generate_contextual_reply(msg.text, is_admin)
-                memory_reply = reference_memory()
+            await fake_typing(group)
 
-                if memory_reply and random.random() < 0.3:
-                    reply = memory_reply
-
-                await fake_typing(group)
-
-                try:
-                    await client.send_message(group, reply, reply_to=msg.id)
-                    add_to_memory(reply)
-                    log_message(reply, msg.sender_id, is_reply=True)
-
-                    # Update time and count after sending a message
-                    last_sent_time = time.time()
-                    message_count += 1
-                except Exception as e:
-                    logging.error(f"Error sending message: {e}")
-                break
-    else:
-        # If 3 messages have been sent in the last minute, wait for a while
-        logging.info("Message limit reached. Waiting for the next minute.")
-        await asyncio.sleep(60 - (time.time() - last_sent_time))  # Wait for the remainder of the minute
+            try:
+                await client.send_message(group, reply, reply_to=msg.id)
+                add_to_memory(reply)
+                log_message(reply, msg.sender_id, is_reply=True)
+            except Exception as e:
+                logging.error(f"Error sending message: {e}")
+            break
 
 # Main bot logic function
 async def main_bot_logic():
     await client.start()
     while True:
         await reply_to_message(group_username)
-        await asyncio.sleep(1)  # Sleep to avoid hitting API too frequently
+        await asyncio.sleep(20)  # Adjusted to prevent constant spamming
 
 # Start Flask server in a separate thread to handle HTTP requests
 if __name__ == "__main__":
