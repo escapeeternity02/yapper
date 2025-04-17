@@ -31,7 +31,7 @@ def add_to_memory(line):
 def reference_memory():
     if memory and random.random() < 0.3:
         ref = random.choice(memory)
-       return f"Like I said earlier: {ref}"
+        return f"Like I said earlier: {ref}"
     return None
 
 # Contextual replies
