@@ -5,6 +5,7 @@ from flask import Flask
 from telethon import TelegramClient
 import threading
 import os
+import time
 
 # Flask setup for web service
 app = Flask(__name__)
@@ -36,23 +37,48 @@ def reference_memory():
         return f"Like I said earlier: {ref}"
     return None
 
-# Contextual replies
+# Enhanced Contextual replies with better diversity
 def generate_contextual_reply(text, is_admin=False):
     text = text.lower()
     reply = None
 
+    # Enhanced responses with more variety
     if "tired" in text:
-        reply = "Mood. Sleep schedule’s a myth here."
+        reply = random.choice([
+            "Mood. Sleep schedule’s a myth here.",
+            "Same, I think I need a nap.",
+            "I feel you. It's like the sleep cycle doesn't exist."
+        ])
     elif "who are you" in text or "what are you" in text:
-        reply = "Just your friendly yap neighbor."
+        reply = random.choice([
+            "Just your friendly yap neighbor.",
+            "I'm just a bot trying to fit in. 😎",
+            "You can call me Yapper, your chatbot friend."
+        ])
     elif "lol" in text or "lmao" in text:
-        reply = "Literally me 😂"
+        reply = random.choice([
+            "Literally me 😂",
+            "I died at that one 😂",
+            "That made me laugh, no cap 😂"
+        ])
     elif "bot" in text:
-        reply = "You callin' me out? 👀"
+        reply = random.choice([
+            "You callin' me out? 👀",
+            "Yes, I am a bot, but don't judge me! 😅",
+            "Yes, I may be a bot, but I’ve got personality!"
+        ])
     elif "why" in text:
-        reply = "Why not?"
+        reply = random.choice([
+            "Why not?",
+            "Because... reasons! 🤷‍♂️",
+            "Just because, that's why. 😜"
+        ])
     elif "admin" in text:
-        reply = "Admins keep this realm in balance fr."
+        reply = random.choice([
+            "Admins keep this realm in balance fr.",
+            "Shoutout to the admins for keeping things running.",
+            "Admins are the true heroes here. 🔥"
+        ])
 
     if is_admin:
         admin_respects = [
@@ -61,7 +87,11 @@ def generate_contextual_reply(text, is_admin=False):
         ]
         reply = reply or random.choice(admin_respects)
 
-    return reply or "idk what to say but here I am anyway."
+    return reply or random.choice([
+        "idk what to say but here I am anyway.",
+        "I'm just here vibing, can't relate tho.",
+        "Your guess is as good as mine! 😅"
+    ])
 
 # Health check route to keep the server alive
 @app.route('/health', methods=['GET'])
@@ -77,7 +107,7 @@ api_hash = 'd1fbc0d985163be463ef2083ffb7b86f'  # Replace with your actual API Ha
 client = TelegramClient(session_file_path, api_id, api_hash)  # API credentials needed
 
 # Admin user IDs for admin-specific replies (adjust with actual admin IDs)
-admins = [123456789, 987654321]  # Replace with actual admin user IDs
+admins = [123456789, 8050338012]  # Replace with actual admin user IDs
 
 # Group username
 group_username = '@yapply'
@@ -94,26 +124,46 @@ async def send_message(group):
     await client.send_message(group, message)
     log_message(message)
 
-# Replying function
+# Time tracking and message limit variables
+last_sent_time = time.time()  # Tracks the last message sent
+message_count = 0  # Tracks how many messages were sent in the last minute
+
+# Replying function with message limit check
 async def reply_to_message(group):
-    async for msg in client.iter_messages(group, limit=50):
-        if msg.sender_id and msg.text and random.random() < 0.5:
-            is_admin = msg.sender_id in admins
-            reply = generate_contextual_reply(msg.text, is_admin)
-            memory_reply = reference_memory()
+    global last_sent_time, message_count
 
-            if memory_reply and random.random() < 0.3:
-                reply = memory_reply
+    # Check if 1 minute has passed since the last message
+    if time.time() - last_sent_time > 60:
+        message_count = 0  # Reset count after 1 minute
 
-            await fake_typing(group)
+    # Check if the bot has sent less than 3 messages in the last minute
+    if message_count < 3:
+        async for msg in client.iter_messages(group, limit=50):
+            if msg.sender_id and msg.text and random.random() < 0.5:
+                is_admin = msg.sender_id in admins
+                reply = generate_contextual_reply(msg.text, is_admin)
+                memory_reply = reference_memory()
 
-            try:
-                await client.send_message(group, reply, reply_to=msg.id)
-                add_to_memory(reply)
-                log_message(reply, msg.sender_id, is_reply=True)
-            except Exception as e:
-                logging.error(f"Error sending message: {e}")
-            break
+                if memory_reply and random.random() < 0.3:
+                    reply = memory_reply
+
+                await fake_typing(group)
+
+                try:
+                    await client.send_message(group, reply, reply_to=msg.id)
+                    add_to_memory(reply)
+                    log_message(reply, msg.sender_id, is_reply=True)
+
+                    # Update time and count after sending a message
+                    last_sent_time = time.time()
+                    message_count += 1
+                except Exception as e:
+                    logging.error(f"Error sending message: {e}")
+                break
+    else:
+        # If 3 messages have been sent in the last minute, wait for a while
+        logging.info("Message limit reached. Waiting for the next minute.")
+        await asyncio.sleep(60 - (time.time() - last_sent_time))  # Wait for the remainder of the minute
 
 # Main bot logic function
 async def main_bot_logic():
